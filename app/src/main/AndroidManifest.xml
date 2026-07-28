@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        INTERNET is used for the one-time Hugging Face sign-in + Gemma model
+        download on first launch (the model file is too large and license-gated
+        to ship inside the APK). Every screen after that — crop suggestions,
+        price prediction, disease detection, soil advice, pest control, etc. —
+        runs the prompt through the on-device Gemma model with zero network calls.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:name=".AgriXApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AgriX"
+        android:largeHeap="true"
+        tools:targetApi="31">
+        <!--
+            allowBackup="false" is deliberate, not just a hardening default:
+            the downloaded Gemma model (hundreds of MB to a few GB, stored at
+            context.filesDir/models — see ModelDownloadManager.modelsDir())
+            and all farmer data (PreferencesManager's DataStore) live only in
+            this app's private internal storage. Android always wipes that
+            storage on uninstall regardless of this flag; allowBackup="false"
+            additionally guarantees none of it can survive via cloud auto-
+            backup, adb backup, or a device-to-device transfer either — so
+            uninstalling AgriX removes the model and every farmer's data from
+            the device completely, with nothing left behind anywhere.
+        -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AgriX">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>
