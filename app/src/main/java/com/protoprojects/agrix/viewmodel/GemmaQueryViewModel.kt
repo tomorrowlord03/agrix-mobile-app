@@ -32,11 +32,28 @@ class GemmaQueryViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<QueryUiState> = _state
 
     fun ask(prompt: String, image: Bitmap? = null) {
+        val trimmedPrompt = prompt.trim()
+        if (trimmedPrompt.isBlank()) {
+            _state.value = QueryUiState.Error("Please enter a question or prompt.")
+            return
+        }
+
+        // Token estimation (~3.5 chars per token for conservative check)
+        val estimatedTokens = (trimmedPrompt.length / 3.5).toInt()
+        val maxTokens = agriXApp.gemma.currentMaxTokens
+        val maxAllowed = maxTokens - 512
+        if (estimatedTokens > maxAllowed) {
+            _state.value = QueryUiState.Error(
+                "Your prompt is too long (~$estimatedTokens tokens). The maximum allowed input is ~$maxAllowed tokens. Please shorten your question."
+            )
+            return
+        }
+
         _state.value = QueryUiState.Loading
         viewModelScope.launch {
             try {
                 check(agriXApp.gemma.isReady) { "Model isn't loaded yet — go back to the dashboard and wait a moment" }
-                val (raw, json) = generateWithJsonRetry(prompt, image)
+                val (raw, json) = generateWithJsonRetry(trimmedPrompt, image)
                 _state.value = QueryUiState.Success(raw, json)
             } catch (t: Throwable) {
                 _state.value = QueryUiState.Error(t.message ?: "Something went wrong running the on-device model")

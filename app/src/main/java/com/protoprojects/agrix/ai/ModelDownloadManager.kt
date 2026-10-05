@@ -38,7 +38,7 @@ class ModelDownloadManager(private val context: Context) {
     fun modelsDir(): File = File(context.filesDir, "models").apply { mkdirs() }
 
     /** Copies a user-picked .task file (via ACTION_OPEN_DOCUMENT) into app-private storage. */
-    fun importLocalFile(uri: Uri, fileName: String = "gemma-model.task"): Flow<DownloadState> = flow {
+    fun importLocalFile(uri: Uri, fileName: String = HFModelSource.MODEL_FILE_NAME): Flow<DownloadState> = flow {
         val target = File(modelsDir(), fileName)
         val resolver = context.contentResolver
         val input = resolver.openInputStream(uri) ?: run {
@@ -82,7 +82,7 @@ class ModelDownloadManager(private val context: Context) {
      * browser does — and validating what actually landed on disk before
      * ever reporting success.
      */
-    fun downloadFromUrl(url: String, fileName: String = "gemma-model.task", cookieHeader: String? = null): Flow<DownloadState> = flow {
+    fun downloadFromUrl(url: String, fileName: String = HFModelSource.MODEL_FILE_NAME, cookieHeader: String? = null): Flow<DownloadState> = flow {
         val target = File(modelsDir(), fileName)
         val tmp = File(modelsDir(), "$fileName.part")
         var connection: HttpURLConnection? = null
@@ -176,21 +176,46 @@ class ModelDownloadManager(private val context: Context) {
         return !(prefix.startsWith("<") || prefix.startsWith("{") || prefix.startsWith("HTTP/"))
     }
 
+    private fun verifySha256(file: File, expectedHash: String): Boolean {
+        return try {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(64 * 1024)
+                var read: Int
+                while (input.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            val actual = digest.digest().joinToString("") { "%02x".format(it) }
+            actual.equals(expectedHash, ignoreCase = true)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private suspend fun FlowCollector<DownloadState>.validateAndEmit(file: File) {
         if (!looksLikeModelFile(file)) {
             file.delete()
             emit(DownloadState.Error("The downloaded file doesn't look like a valid model — try again."))
             return
         }
+        val expectedSha = HFModelSource.MODEL_SHA256
+        if (expectedSha.isNotBlank() && expectedSha != "REPLACE_WITH_ACTUAL_SHA256_AFTER_DOWNLOAD") {
+            if (!verifySha256(file, expectedSha)) {
+                file.delete()
+                emit(DownloadState.Error("Model integrity verification failed (SHA-256 mismatch). File may be corrupted or truncated."))
+                return
+            }
+        }
         emit(DownloadState.Done(file.absolutePath))
     }
 
-    fun existingModelPath(fileName: String = "gemma-model.task"): String? {
+    fun existingModelPath(fileName: String = HFModelSource.MODEL_FILE_NAME): String? {
         val f = File(modelsDir(), fileName)
         return if (f.exists() && f.length() >= MIN_PLAUSIBLE_MODEL_BYTES) f.absolutePath else null
     }
 
-    fun deleteModel(fileName: String = "gemma-model.task") {
+    fun deleteModel(fileName: String = HFModelSource.MODEL_FILE_NAME) {
         File(modelsDir(), fileName).delete()
     }
 

@@ -89,6 +89,10 @@ class GemmaInferenceEngine(private val context: Context) {
     var visionCapable: Boolean = false
         private set
 
+    /** The maxTokens (context size) the currently loaded model was initialized with. */
+    var currentMaxTokens: Int = 4096
+        private set
+
     val isReady: Boolean get() = llmInference != null
 
     /**
@@ -102,7 +106,7 @@ class GemmaInferenceEngine(private val context: Context) {
      */
     suspend fun load(
         modelPath: String,
-        maxTokens: Int = 256,
+        maxTokens: Int = 4096,
         topK: Int = 40,
         temperature: Float = 0.7f,
         maxNumImages: Int = 0
@@ -129,6 +133,7 @@ class GemmaInferenceEngine(private val context: Context) {
         }
         loadedModelPath = modelPath
         visionCapable = maxNumImages > 0
+        currentMaxTokens = maxTokens
         this@GemmaInferenceEngine.topK = topK
         this@GemmaInferenceEngine.temperature = temperature
     }
@@ -168,6 +173,9 @@ class GemmaInferenceEngine(private val context: Context) {
      */
     suspend fun generate(prompt: String, image: Bitmap? = null): String = withContext(Dispatchers.Default) {
         val engine = llmInference ?: error("Gemma model is not loaded yet")
+
+        // Validate prompt length against model's context window
+        validatePromptLengthOrThrow(prompt)
 
         // Checked BEFORE touching any vision API — the engine was never given
         // image slots for a text-only model, so calling addImage()/enabling
@@ -212,6 +220,25 @@ class GemmaInferenceEngine(private val context: Context) {
         }
     }
 
+    /**
+     * Validates that the prompt fits within the model's context window.
+     * Rough estimation: ~3-4 chars per token for English, more for other languages.
+     * Reserves 512 tokens for output + system prompt overhead.
+     */
+    private fun validatePromptLengthOrThrow(prompt: String) {
+        val estimatedTokens = (prompt.length / 3.5).toInt() // Conservative estimate
+        val reservedTokens = 512 // Output + system prompt + safety margin
+        val availableTokens = currentMaxTokens - reservedTokens
+
+        if (estimatedTokens > availableTokens) {
+            throw IllegalArgumentException(
+                "Prompt too long (~$estimatedTokens tokens). Maximum allowed: ~$availableTokens tokens " +
+                "(model context: ${currentMaxTokens}, reserved: $reservedTokens). " +
+                "Please shorten your input or use a larger-context model."
+            )
+        }
+    }
+
     private fun formatChatPrompt(userPrompt: String): String =
         "<start_of_turn>user\n$userPrompt<end_of_turn>\n<start_of_turn>model\n"
 
@@ -220,5 +247,6 @@ class GemmaInferenceEngine(private val context: Context) {
         llmInference = null
         loadedModelPath = null
         visionCapable = false
+        currentMaxTokens = 4096
     }
 }

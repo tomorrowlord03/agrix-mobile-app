@@ -147,4 +147,20 @@ object PromptTemplates {
         Write a short, friendly community post (2-3 sentences) in $languagePreference for Indian
         farmers about: $topic
     """.trimIndent() + jsonInstruction("""{"post": "string"}""")
+
+    fun irrigationAndFertilizerAdvice(cropName: String, telemetry: com.protoprojects.agrix.iot.FarmTelemetry): String = """
+        You are an expert precision irrigation and fertigation agronomist for Indian agriculture.
+        Here is live telemetry acquired from the farmer's field sensors and ESP32 gateway:
+
+        Crop: $cropName
+        Field Telemetry:
+        ${telemetry.toPromptSummary()}
+
+        Based on the measured soil moisture, water flow rate, fertilizer flow, and soil NPK levels:
+        1. Evaluate if current water application is adequate or if over/under-watering is occurring.
+        2. Advise whether fertilizer dosing rate should be continued, adjusted, or stopped.
+        3. Provide actionable steps for the next irrigation and fertigation cycle.
+    """.trimIndent() + jsonInstruction(
+        """{"irrigationStatus": "string", "fertigationStatus": "string", "recommendedAction": "string", "nextCycleHours": number, "confidence": number}"""
+    )
 }
