@@ -1,0 +1,107 @@
+name: AgriX CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build & Test Android App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --continue
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: agrix-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+  build-firmware:
+    name: Compile ESP32 Gateway & Sensor Firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install PlatformIO Core
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Compile Gateway Firmware (ESP32)
+        working-directory: agrix-firmware/gateway
+        run: pio run -e esp32dev
+
+      - name: Compile Sensor Node Firmware (ESP32)
+        working-directory: agrix-firmware/sensor-node
+        run: pio run -e esp32dev
+
+      - name: Upload Firmware Binaries
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: agrix-esp32-firmware
+          path: |
+            agrix-firmware/gateway/.pio/build/esp32dev/firmware.bin
+            agrix-firmware/sensor-node/.pio/build/esp32dev/firmware.bin
+          retention-days: 14
+
+  verify-docs-and-audit:
+    name: Verify Documentation Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Documentation Suite
+        run: |
+          DOCS=(
+            "docs/architecture.md"
+            "docs/litert-lm-migration.md"
+            "docs/firmware-gateway.md"
+            "docs/firmware-sensor-node.md"
+            "docs/offline-deployment.md"
+            "docs/security-audit.md"
+            "docs/prompt-engineering.md"
+            "docs/farmer-ux.md"
+            "PEER-AUDIT.md"
+          )
+          for doc in "${DOCS[@]}"; do
+            if [ ! -s "$doc" ]; then
+              echo "Error: $doc is missing or empty!"
+              exit 1
+            fi
+            echo "Verified: $doc ($(wc -l < "$doc") lines)"
+          done
