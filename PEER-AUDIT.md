@@ -79,22 +79,37 @@ A comprehensive architectural and technical audit of the AgriX offline Android a
 
 | # | Issue | Recommended Fix | Status |
 |---|---|---|---|
-| 7 | MediaPipe LLM deprecation | Migrate to LiteRT-LM Kotlin API for NPU support and 2.2x faster decode | Planned |
-| 8 | Multi-turn session reuse | Maintain persistent `LlmInferenceSession` across conversation turns | Planned |
-| 9 | Blocking UI inference | Migrate `generateResponse()` to `generateResponseAsync` with streaming StateFlow | Planned |
+| 7 | MediaPipe LLM deprecation | Migrate to LiteRT-LM Kotlin API for NPU support and 2.2x faster decode | ✅ Completed (`1e0cf32`) |
+| 8 | Multi-turn session reuse | Maintain persistent `Conversation` session across conversation turns | ✅ Completed (`1e0cf32`) |
+| 9 | Blocking UI inference | Migrate to streaming `StateFlow<QueryUiState>` with token-by-token emission | ✅ Completed (`1e0cf32`) |
 | 10 | Language & Accessibility | Integrate Hindi/Marathi/Telugu STT (ML Kit) and TTS for voice-first farmer UX | Planned |
-| 11 | Farmer UX formatting | Transform raw model JSON responses into visual advisory cards with icons | In Progress |
-| 12 | Dependency skew | Align `tasks-genai` and `tasks-vision` versions in `build.gradle.kts` | Audited |
+| 11 | Farmer UX formatting | Transform raw model responses into visual advisory cards with icons | ✅ Completed (`1e0cf32`) |
+| 12 | Dependency skew | Align `tasks-genai` and `tasks-vision` versions in `build.gradle.kts` | ✅ Completed (`1e0cf32`) |
 
 ---
 
 ## Summary of Implemented Changes
 
-1. **`GemmaInferenceEngine.kt`**: Set `maxTokens = 4096`, added prompt length validation, and safeguarded against text-only model vision calls.
-2. **`HFModelSource.kt`**: Updated model URL to 4096-context int4 build, added `MODEL_VERSION` and `MODEL_SHA256`.
-3. **`GemmaQueryViewModel.kt`**: Added input validation, prompt blank check, and token limits.
-4. **`PromptTemplates.kt`**: Added `irrigationAndFertilizerAdvice` incorporating live field telemetry.
-5. **`IoTGatewayManager.kt`** *(New)*: Gateway manager for ESP32 solar bridge supporting BLE, local WiFi, USB-OTG, and realistic simulation telemetry.
-6. **`SensorDataRepository.kt`** *(New)*: SQLite time-series store for water flow, fertigation dosing, NPK, pH, and soil moisture.
-7. **`ModelDistributionManager.kt`** *(New)*: P2P offline model distribution via SD card / USB / local transfer with SHA-256 integrity verification.
-8. **`AgriXApp.kt`**: Initialized and exposed `IoTGatewayManager`, `SensorDataRepository`, and `ModelDistributionManager`.
+1. **`GemmaInferenceEngine.kt`**:
+   - Replaced deprecated MediaPipe LLM Inference with LiteRT-LM `Engine` and `Conversation` APIs.
+   - Enabled hardware acceleration with priority NPU fallback to GPU and CPU.
+   - Added Multi-Token Prediction (MTP) support for 2.2x faster token generation.
+   - Implemented reactive streaming callbacks emitting incremental token chunks.
+2. **`GemmaQueryViewModel.kt`**:
+   - Added `QueryUiState.Streaming(partialText)` and token-by-token UI updates with backpressure buffering.
+3. **`FeatureScreenCommon.kt`**:
+   - Added streaming token cards with dynamic typing cursor and visual indicators.
+4. **`HFModelSource.kt`**:
+   - Added `.litertlm` model metadata, 4096-context window, and SHA-256 integrity checksum verification.
+5. **`IoTGatewayManager.kt`**:
+   - Full gateway communication layer supporting Bluetooth LE GATT, local SoftAP HTTP/WebSocket, and USB-OTG serial.
+6. **`SensorDataRepository.kt`**:
+   - SQLite time-series telemetry store for YF-S201 flow pulses, RS485 Modbus NPK, pH, and soil moisture.
+7. **`ModelDistributionManager.kt`**:
+   - Zero-internet peer-to-peer model provisioning via SD card, USB flash drives, and BLE transfer.
+8. **`agrix-firmware/gateway`**:
+   - ESP32 gateway PlatformIO firmware with ESP-NOW receiver, LoRa SX1276 bridge, BLE GATT server, and INA219 solar monitor.
+9. **`agrix-firmware/sensor-node`**:
+   - ESP32 ultra-low-power sensor node firmware with ESP32 PCNT pulse counter (YF-S201), MAX485 Modbus RTU, LoRa uplink, and deep sleep.
+10. **`docs/`**:
+    - Comprehensive 8-part technical documentation suite covering architecture, LiteRT-LM migration, firmware specifications, security audit, prompt engineering, and offline deployment.
