@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.protoprojects.agrix.AgriXApp
 import com.protoprojects.agrix.ai.JsonExtractor
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,6 +15,7 @@ import org.json.JSONObject
 sealed class QueryUiState {
     object Idle : QueryUiState()
     object Loading : QueryUiState()
+    data class Streaming(val partialText: String) : QueryUiState()
     data class Success(val raw: String, val json: JSONObject?) : QueryUiState()
     data class Error(val message: String) : QueryUiState()
 }
@@ -55,6 +57,46 @@ class GemmaQueryViewModel(app: Application) : AndroidViewModel(app) {
                 check(agriXApp.gemma.isReady) { "Model isn't loaded yet — go back to the dashboard and wait a moment" }
                 val (raw, json) = generateWithJsonRetry(trimmedPrompt, image)
                 _state.value = QueryUiState.Success(raw, json)
+            } catch (t: Throwable) {
+                _state.value = QueryUiState.Error(t.message ?: "Something went wrong running the on-device model")
+            }
+        }
+    }
+
+    /**
+     * Streaming version that emits partial tokens as they're generated.
+     * Provides better perceived latency for users.
+     */
+    fun askStreaming(prompt: String, image: Bitmap? = null) {
+        val trimmedPrompt = prompt.trim()
+        if (trimmedPrompt.isBlank()) {
+            _state.value = QueryUiState.Error("Please enter a question or prompt.")
+            return
+        }
+
+        _state.value = QueryUiState.Loading
+        viewModelScope.launch {
+            try {
+                check(agriXApp.gemma.isReady) { "Model isn't loaded yet — go back to the dashboard and wait a moment" }
+                
+                val channel = Channel<String>(Channel.UNLIMITED)
+                
+                // Launch generation with streaming
+                viewModelScope.launch {
+                    agriXApp.gemma.generateStreaming(trimmedPrompt, image, channel)
+                }
+                
+                // Collect streaming tokens
+                var fullResponse = ""
+                for (token in channel) {
+                    fullResponse += token
+                    _state.value = QueryUiState.Streaming(fullResponse)
+                }
+                
+                // Try to extract JSON from complete response
+                val json = JsonExtractor.extractJson(fullResponse)
+                _state.value = QueryUiState.Success(fullResponse, json)
+                
             } catch (t: Throwable) {
                 _state.value = QueryUiState.Error(t.message ?: "Something went wrong running the on-device model")
             }

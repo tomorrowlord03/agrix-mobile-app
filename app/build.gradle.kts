@@ -73,10 +73,11 @@ dependencies {
     // Local, on-disk key-value storage (no server, no cloud sync)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // ---- On-device Gemma inference (Google MediaPipe LLM Inference API) ----
-    // This is the piece that replaces the old Genkit/Gemini cloud calls.
-    // It runs a quantized Gemma .task model entirely on-device (CPU/GPU delegate).
+    // ---- On-device Gemma inference (Google MediaPipe & LiteRT-LM API) ----
+    // Google MediaPipe LLM Inference API (maintenance line)
     implementation("com.google.mediapipe:tasks-genai:0.10.24")
+    // Google LiteRT-LM (next-gen on-device engine with NPU acceleration & MTP)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.2")
 
     // tasks-vision brings in the com.google.mediapipe.framework.image classes
     // (MPImage / BitmapImageBuilder) used to attach a photo to a prompt for

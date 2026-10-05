@@ -33,6 +33,19 @@ fun ResultArea(state: QueryUiState) {
                 MicroLabel("Analyzing on-device…")
             }
         }
+        is QueryUiState.Streaming -> {
+            GlassCard(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AgrixNeonGreen, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        MicroLabel("Streaming response…")
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(state.partialText, color = AgrixWhite, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
         is QueryUiState.Error -> {
             GlassCard(modifier = Modifier.fillMaxWidth().padding(top = 20.dp)) {
                 Column {
