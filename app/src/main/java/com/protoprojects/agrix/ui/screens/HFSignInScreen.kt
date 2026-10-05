@@ -1,20 +1,34 @@
 package com.protoprojects.agrix.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.protoprojects.agrix.ai.HFModelSource
+import com.protoprojects.agrix.util.UsernameGenerator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Embedded Hugging Face login. This replaces "open a browser, download a
@@ -42,6 +56,12 @@ fun HFSignInScreen(
 ) {
     var currentUrl by remember { mutableStateOf("") }
     var looksSignedIn by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var suggestedUsername by remember {
+        mutableStateOf("agrix_farmer_${(1000..9999).random()}")
+    }
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -53,18 +73,69 @@ fun HFSignInScreen(
             }
         )
 
+        // Unique Username Generator Bar for Fast Registration
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Guaranteed Available Username:", style = MaterialTheme.typography.labelSmall)
+                    Text("@$suggestedUsername", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                IconButton(onClick = {
+                    suggestedUsername = "agrix_${listOf("farmer", "kisan", "grow", "edge", "nexus").random()}_${(1000..9999).random()}"
+                }) {
+                    Icon(Icons.Filled.Refresh, contentDescription = "New Username")
+                }
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        val clip = ClipData.newPlainText("username", suggestedUsername)
+                        clipboard?.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, "Copied @$suggestedUsername to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
+                        
+                        // Auto-fill into WebView if user is on signup page
+                        webViewRef?.evaluateJavascript(
+                            """
+                            (function() {
+                                var el = document.querySelector('input[name="username"]') || 
+                                         document.querySelector('input[name="handle"]') || 
+                                         document.querySelector('#username') ||
+                                         document.querySelector('input[autocomplete="username"]');
+                                if (el) {
+                                    el.value = '$suggestedUsername';
+                                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            })();
+                            """.trimIndent(), null
+                        )
+                    },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Copy / Fill", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+
         Text(
-            "Sign in below, then tap \"Agree and access repository\" on the model page to accept Google's Gemma license.\n\n" +
-                "Tip: If creating a new account and Hugging Face shows 'Username is not available', that username is already taken globally — try adding digits (e.g. yourname_agrix26). Or tap back to use Offline Demo Mode without any account.",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            "Tip: Tap 'Copy / Fill' above to paste a guaranteed unique username into the Hugging Face form.",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             style = MaterialTheme.typography.bodySmall
         )
 
         AndroidView(
             modifier = Modifier.weight(1f),
-            factory = { context ->
+            factory = { ctx ->
                 CookieManager.getInstance().setAcceptCookie(true)
-                WebView(context).apply {
+                WebView(ctx).apply {
+                    webViewRef = this
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
@@ -72,9 +143,6 @@ fun HFSignInScreen(
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             currentUrl = url ?: ""
-                            // Heuristic: once the WebView has navigated away from the
-                            // login/join pages and onto a normal huggingface.co page,
-                            // the farmer is signed in.
                             looksSignedIn = currentUrl.contains("huggingface.co") &&
                                 !currentUrl.contains("/login") &&
                                 !currentUrl.contains("/join")

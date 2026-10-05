@@ -54,7 +54,20 @@ fun OnboardingScreen(app: AgriXApp, onDone: () -> Unit) {
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth()) {
-                OutlinedTextField(name, { name = it }, label = { Text("Your name") }, modifier = Modifier.fillMaxWidth(), colors = fieldColors)
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Your name / handle") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    trailingIcon = {
+                        TextButton(onClick = {
+                            name = "Kisan_${listOf("Anshuman", "Rao", "Patel", "Singh", "Verma", "Dev").random()}_${(100..999).random()}"
+                        }) {
+                            Text("🎲 Auto", color = AgrixNeonGreen, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(location, { location = it }, label = { Text("Village / town, district") }, modifier = Modifier.fillMaxWidth(), colors = fieldColors)
                 Spacer(Modifier.height(12.dp))
