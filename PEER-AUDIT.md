@@ -1,8 +1,7 @@
-# October Peer Audit — AgriX Offline App
+# Peer Audit — AgriX Offline App
 
 **Date:** 2026-10-05  
-**Project:** AgriX Offline Android Application  
-**Audit Conducted By:** Atlas & Orion (via October Canvas Collaboration)  
+**Project:** AgriX Offline Android Application 
 **Status:** In Progress / Fixes Applied  
 
 ---
