@@ -72,14 +72,13 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // ---- On-device Gemma inference (Google MediaPipe & LiteRT-LM API) ----
-        // Google LiteRT-LM (production-ready on-device engine with NPU acceleration & MTP)
-        // Replaces MediaPipe LLM Inference (maintenance-only as of mid-2026)
-        implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
+    // Google MediaPipe LLM Inference API (provides LlmInference, Session, Backend)
+    implementation("com.google.mediapipe:tasks-genai:0.10.24")
 
-        // tasks-vision brings in the com.google.mediapipe.framework.image classes
-        // (MPImage / BitmapImageBuilder) used to attach a photo to a prompt for
-        // vision-capable Gemma models (e.g. Gemma 3n E2B/E4B, not 1B IT).
-        implementation("com.google.mediapipe:tasks-vision:0.10.20")
+    // tasks-vision brings in the com.google.mediapipe.framework.image classes
+    // (MPImage / BitmapImageBuilder) used to attach a photo to a prompt for
+    // vision-capable Gemma models (e.g. Gemma 3n E2B/E4B, not 1B IT).
+    implementation("com.google.mediapipe:tasks-vision:0.10.20")
 
     implementation("org.json:json:20240303")
 
