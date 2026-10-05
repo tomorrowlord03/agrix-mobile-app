@@ -46,6 +46,37 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
+    companion object {
+        val DEFAULT_PROFILE = FarmerProfile(
+            name = "Anshuman Yadav",
+            location = "Ludhiana, Punjab",
+            farmSize = "8.5",
+            soilType = "Alluvial Loam (pH 7.2)",
+            mainCrops = "Wheat, Paddy, Mustard",
+            languagePreference = "English"
+        )
+    }
+
+    suspend fun ensureDefaultProfileAndModel() {
+        context.dataStore.edit {
+            val existingName = it[Keys.FARMER_NAME]
+            if (existingName.isNullOrBlank()) {
+                it[Keys.FARMER_NAME] = DEFAULT_PROFILE.name
+                it[Keys.FARMER_LOCATION] = DEFAULT_PROFILE.location
+                it[Keys.FARM_SIZE] = DEFAULT_PROFILE.farmSize
+                it[Keys.SOIL_TYPE] = DEFAULT_PROFILE.soilType
+                it[Keys.MAIN_CROPS] = DEFAULT_PROFILE.mainCrops
+                it[Keys.LANGUAGE] = DEFAULT_PROFILE.languagePreference
+                it[Keys.ONBOARDED] = true
+            }
+            val existingModel = it[Keys.MODEL_PATH]
+            if (existingModel.isNullOrBlank()) {
+                it[Keys.MODEL_PATH] = "demo_mode"
+                it[Keys.MODEL_READY] = true
+            }
+        }
+    }
+
     suspend fun setOnboarded(name: String, location: String, farmSize: String, soilType: String, mainCrops: String, language: String) {
         context.dataStore.edit {
             it[Keys.FARMER_NAME] = name

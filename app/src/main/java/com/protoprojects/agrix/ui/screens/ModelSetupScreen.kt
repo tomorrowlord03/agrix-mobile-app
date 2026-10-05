@@ -51,7 +51,8 @@ private enum class SetupStage { INTRO, SIGNING_IN }
 @Composable
 fun ModelSetupScreen(
     viewModel: ModelSetupViewModel = viewModel(),
-    onModelReady: () -> Unit
+    onModelReady: () -> Unit,
+    onBack: (() -> Unit)? = null
 ) {
     var stage by remember { mutableStateOf(SetupStage.INTRO) }
     val downloadState by viewModel.downloadState.collectAsState()
@@ -206,11 +207,21 @@ private fun SetupButtons(
     onDemoClick: () -> Unit
 ) {
     NeonPrimaryButton(
-        text = "Sign in & install AI model",
+        text = "Start Immediately (Offline Mode - No Login)",
+        onClick = onDemoClick,
+        modifier = Modifier.fillMaxWidth(),
+        icon = { Icon(Icons.Filled.Eco, contentDescription = null, tint = androidx.compose.ui.graphics.Color.Black, modifier = Modifier.size(18.dp).padding(end = 4.dp)) }
+    )
+    Spacer(Modifier.height(12.dp))
+    OutlinedButton(
         onClick = onSignInClick,
         modifier = Modifier.fillMaxWidth(),
-        icon = { Icon(Icons.Filled.Login, contentDescription = null, tint = androidx.compose.ui.graphics.Color.Black, modifier = Modifier.size(18.dp).padding(end = 4.dp)) }
-    )
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AgrixWhite)
+    ) {
+        Icon(Icons.Filled.Login, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Sign in to Hugging Face (Optional: 550MB Weights)")
+    }
     Spacer(Modifier.height(12.dp))
     OutlinedButton(
         onClick = onImportClick,
@@ -219,17 +230,6 @@ private fun SetupButtons(
     ) {
         Icon(Icons.Filled.FolderOpen, contentDescription = null)
         Spacer(Modifier.width(8.dp))
-        Text("I already have the model file")
-    }
-    Spacer(Modifier.height(12.dp))
-    OutlinedButton(
-        onClick = onDemoClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = AgrixNeonGreen),
-        border = androidx.compose.foundation.BorderStroke(1.dp, AgrixNeonGreen.copy(alpha = 0.6f))
-    ) {
-        Icon(Icons.Filled.Eco, contentDescription = null, tint = AgrixNeonGreen)
-        Spacer(Modifier.width(8.dp))
-        Text("Continue in Offline Demo Mode (No Login)", color = AgrixNeonGreen, fontWeight = FontWeight.SemiBold)
+        Text("I already have the model file (.task)")
     }
 }

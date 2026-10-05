@@ -53,6 +53,13 @@ fun AgriXNavHost(app: AgriXApp) {
     var loaded by remember { mutableStateOf<LoadedPersistedState?>(null) }
 
     LaunchedEffect(Unit) {
+        // Automatically create and pre-seed on-device farmer profile & offline demo AI model
+        app.prefs.ensureDefaultProfileAndModel()
+        if (!app.gemma.isReady) {
+            try {
+                app.gemma.load("demo_mode")
+            } catch (t: Throwable) {}
+        }
         val (modelReady, onboarded) = combine(app.prefs.modelReady, app.prefs.onboarded) { m, o -> m to o }.first()
         loaded = LoadedPersistedState(modelReady, onboarded)
     }
@@ -121,9 +128,15 @@ private fun AgriXNavHostContent(app: AgriXApp, modelReady: Boolean, onboarded: B
             })
         }
         composable(Routes.DASHBOARD) {
-            DashboardScreen(onOpenFeature = { route -> navController.navigate(route) })
+            DashboardScreen(app = app, onOpenFeature = { route -> navController.navigate(route) })
         }
-        composable("profile") { ProfileScreen(app = app) }
+        composable("profile") {
+            ProfileScreen(
+                app = app,
+                onBack = { navController.popBackStack() },
+                onOpenModelSetup = { navController.navigate(Routes.MODEL_SETUP) }
+            )
+        }
         composable("crop_suggester") { CropSuggesterScreen(app = app) }
         composable("price_predictor") { PricePredictorScreen(app = app) }
         composable("pest_control") { PestControlScreen() }

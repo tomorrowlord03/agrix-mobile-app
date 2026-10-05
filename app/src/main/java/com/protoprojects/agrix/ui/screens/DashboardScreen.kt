@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.protoprojects.agrix.AgriXApp
 import com.protoprojects.agrix.ui.components.GlassCard
 import com.protoprojects.agrix.ui.components.GlassIconButton
 import com.protoprojects.agrix.ui.components.MicroLabel
@@ -50,8 +51,10 @@ private val bentoFeatures = listOf(
 )
 
 @Composable
-fun DashboardScreen(onOpenFeature: (String) -> Unit) {
+fun DashboardScreen(app: AgriXApp? = null, onOpenFeature: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
+    val profile by (app?.prefs?.farmerProfile?.collectAsState(initial = null) ?: remember { mutableStateOf(null) })
+    val farmerName = profile?.name ?: "Anshuman Yadav"
     val filtered = remember(query) {
         if (query.isBlank()) allFeatures
         else allFeatures.filter { it.title.contains(query, ignoreCase = true) || it.subtitle.contains(query, ignoreCase = true) }
@@ -65,7 +68,10 @@ fun DashboardScreen(onOpenFeature: (String) -> Unit) {
                 .padding(horizontal = 20.dp)
                 .padding(top = 20.dp, bottom = 120.dp)
         ) {
-            DashboardHeader()
+            DashboardHeader(
+                farmerName = farmerName,
+                onProfileClick = { onOpenFeature("profile") }
+            )
             Spacer(Modifier.height(20.dp))
             SearchBar(query = query, onQueryChange = { query = it })
             Spacer(Modifier.height(20.dp))
@@ -104,24 +110,25 @@ fun DashboardScreen(onOpenFeature: (String) -> Unit) {
 }
 
 @Composable
-private fun DashboardHeader() {
+private fun DashboardHeader(farmerName: String, onProfileClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(AgrixSurfaceGreyElevated)
-                .border(1.dp, AgrixGlassBorder, CircleShape),
+                .border(1.dp, AgrixNeonGreen.copy(alpha = 0.5f), CircleShape)
+                .clickable(onClick = onProfileClick),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Eco, contentDescription = null, tint = AgrixNeonGreen, modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.Person, contentDescription = null, tint = AgrixNeonGreen, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            MicroLabel("Agrix Node")
+        Column(Modifier.weight(1f).clickable(onClick = onProfileClick)) {
+            MicroLabel("Farmer: $farmerName")
             Text("Farm Status: Optimal", style = MaterialTheme.typography.titleMedium, color = AgrixWhite)
         }
-        GlassIconButton(icon = Icons.Filled.Notifications, contentDescription = "Notifications", onClick = {})
+        GlassIconButton(icon = Icons.Filled.AccountCircle, contentDescription = "Profile", onClick = onProfileClick)
     }
 }
 

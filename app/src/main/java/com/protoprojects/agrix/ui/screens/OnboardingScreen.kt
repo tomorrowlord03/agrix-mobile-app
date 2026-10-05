@@ -20,11 +20,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun OnboardingScreen(app: AgriXApp, onDone: () -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    var farmSize by remember { mutableStateOf("") }
-    var soilType by remember { mutableStateOf("") }
-    var mainCrops by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("Anshuman Yadav") }
+    var location by remember { mutableStateOf("Ludhiana, Punjab") }
+    var farmSize by remember { mutableStateOf("8.5") }
+    var soilType by remember { mutableStateOf("Alluvial Loam (pH 7.2)") }
+    var mainCrops by remember { mutableStateOf("Wheat, Paddy, Mustard") }
     val scope = rememberCoroutineScope()
 
     val fieldColors = TextFieldDefaults.colors(
