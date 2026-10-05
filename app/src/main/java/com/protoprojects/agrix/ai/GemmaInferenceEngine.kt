@@ -118,7 +118,11 @@ class GemmaInferenceEngine(private val context: Context) {
     var currentMaxTokens: Int = 4096
         private set
 
-    val isReady: Boolean get() = llmInference != null
+    /** Whether the engine is operating in offline demo / preview mode without a physical weights file. */
+    var isDemoMode: Boolean = false
+        private set
+
+    val isReady: Boolean get() = llmInference != null || isDemoMode
 
     val isLiteRtLmFormat: Boolean get() = loadedModelPath?.endsWith(".litertlm") == true
 
@@ -135,9 +139,17 @@ class GemmaInferenceEngine(private val context: Context) {
         backend: HardwareBackend = HardwareBackend.AUTO,
         enableMtp: Boolean = true
     ) = withContext(Dispatchers.Default) {
-        if (loadedModelPath == modelPath && llmInference != null) return@withContext
+        if (loadedModelPath == modelPath && (llmInference != null || isDemoMode)) return@withContext
 
         close()
+
+        if (modelPath == "demo_mode") {
+            isDemoMode = true
+            loadedModelPath = "demo_mode"
+            currentBackend = HardwareBackend.CPU
+            Log.i(TAG, "AgriX initialized in Offline Demo Mode (Simulation Active)")
+            return@withContext
+        }
 
         val file = File(modelPath)
         require(file.exists()) { "Model file not found at $modelPath" }
@@ -223,6 +235,9 @@ class GemmaInferenceEngine(private val context: Context) {
      * clean answer.
      */
     suspend fun generate(prompt: String, image: Bitmap? = null): String = withContext(Dispatchers.Default) {
+        if (isDemoMode) {
+            return@withContext generateDemoResponse(prompt)
+        }
         val engine = llmInference ?: error("Gemma model is not loaded yet")
 
         // Validate prompt length against model's context window
@@ -349,8 +364,72 @@ class GemmaInferenceEngine(private val context: Context) {
     fun close() {
         llmInference?.close()
         llmInference = null
+        isDemoMode = false
         loadedModelPath = null
         visionCapable = false
         currentMaxTokens = 4096
+    }
+
+    private fun generateDemoResponse(prompt: String): String {
+        val p = prompt.lowercase()
+        return when {
+            p.contains("profit") || p.contains("crop") || p.contains("suggest") ->
+                """
+                🌾 Recommended Crops for Your Farm:
+                1. Soybean (JS 9560 / JS 335): High drought tolerance, ~35-40 days to flower, projected profit: ₹28,000 - ₹34,000/acre.
+                2. Groundnut (TG 37A): Excellent nitrogen fixation for your soil, projected profit: ₹32,000 - ₹38,000/acre.
+                3. Chickpea / Gram (Desi): Low irrigation requirement, strong local market demand, projected profit: ₹24,000 - ₹30,000/acre.
+
+                💡 Management Tip: Intersperse with pigeon pea (arhar) on field borders to deter pests and enrich organic soil nitrogen.
+                """.trimIndent()
+
+            p.contains("price") || p.contains("market") ->
+                """
+                📈 Market Price Forecast (Local Mandi):
+                • Current Average: ₹3,850 - ₹4,150 / quintal
+                • 30-Day Outlook: Moderate upward trend expected (+8-12%) due to festival demand and seasonal supply transition.
+                • Recommended Selling Strategy: Store 40% of produce post-harvest in dry storage; stagger sales across the next 4-6 weeks for optimal price realization.
+                """.trimIndent()
+
+            p.contains("pest") || p.contains("insect") || p.contains("worm") ->
+                """
+                🛡️ Integrated Pest Management (IPM) Protocol:
+                1. Organic Spray: Apply 5% Neem Seed Kernel Extract (NSKE) or Neem Oil (10,000 ppm) at 3-5 ml per liter of water during early morning.
+                2. Mechanical Control: Install yellow sticky traps (10-12/acre) for sucking pests and pheromone traps (5/acre) for pod borers.
+                3. Biocontrol: Release Trichogramma parasitoids (50,000/ha) or apply Beauveria bassiana (2 g/L) if larvae infestation exceeds economic threshold level (ETL).
+                """.trimIndent()
+
+            p.contains("disease") || p.contains("spot") || p.contains("yellow") || p.contains("wilt") ->
+                """
+                🔬 Diagnostic Assessment & Treatment:
+                • Likely Diagnosis: Fungal Leaf Spot / Rust Complex
+                • Immediate Action: Prune heavily affected lower leaves to improve field aeration.
+                • Remedial Spray: Spray Copper Oxychloride (50% WP) @ 2.5 g/L or Trichoderma viride bio-fungicide @ 5 g/L during dry periods.
+                • Soil Health: Avoid water stagnation around root zones; apply well-decomposed FYM enriched with Pseudomonas fluorescens.
+                """.trimIndent()
+
+            p.contains("soil") || p.contains("fertilizer") || p.contains("npk") ->
+                """
+                🌱 Soil Health & Nutrient Prescription:
+                • Nitrogen (N): Apply split application: 50% basal at sowing, 25% at tillering/flowering, 25% during grain fill.
+                • Phosphorus (P): Incorporate Single Super Phosphate (SSP) at root depth to promote robust root establishment.
+                • Potassium (K) & Micronutrients: Apply MOP (Muriate of Potash) along with Zinc Sulphate (21%) @ 10 kg/acre to prevent chlorosis.
+                • pH Balancing: If pH < 6.0, apply agricultural lime (200 kg/acre); if alkaline (pH > 8.0), add gypsum and green manure.
+                """.trimIndent()
+
+            p.contains("water") || p.contains("irrigation") || p.contains("schedule") ->
+                """
+                💧 Precision Irrigation Schedule:
+                • Moisture Status: Critical root zone depth requires ~25-30 mm moisture replenishing every 5-7 days.
+                • Timing: Run drip or micro-sprinklers early in the morning (6:00 AM - 9:00 AM) to reduce evaporative loss by up to 35%.
+                • Critical Stages: Ensure uniform moisture during crown root initiation, flowering, and pod development phases.
+                """.trimIndent()
+
+            else ->
+                """
+                🚜 AgriX Agronomic Guidance:
+                Based on your farm profile and local agro-climatic conditions, optimize seed treatment with Rhizobium/Trichoderma before sowing. Maintain balanced NPK nutrition (4:2:1 ratio) and monitor weekly sensor telemetry for soil moisture and temperature fluctuations.
+                """.trimIndent()
+        }
     }
 }

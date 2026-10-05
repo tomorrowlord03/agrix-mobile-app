@@ -54,8 +54,8 @@ fun HFSignInScreen(
         )
 
         Text(
-            "Sign in below, then open the model page once and tap \"Agree and access repository\" " +
-                "if you haven't before. This is a one-time step required by Google's Gemma license.",
+            "Sign in below, then tap \"Agree and access repository\" on the model page to accept Google's Gemma license.\n\n" +
+                "Tip: If creating a new account and Hugging Face shows 'Username is not available', that username is already taken globally — try adding digits (e.g. yourname_agrix26). Or tap back to use Offline Demo Mode without any account.",
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.bodySmall
         )

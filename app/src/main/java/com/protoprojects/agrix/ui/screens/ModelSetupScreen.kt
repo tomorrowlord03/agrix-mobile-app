@@ -124,6 +124,7 @@ fun ModelSetupScreen(
                     loadState = loadState,
                     onSignInClick = { stage = SetupStage.SIGNING_IN },
                     onImportClick = { filePicker.launch(arrayOf("*/*")) },
+                    onDemoClick = { viewModel.launchDemoMode() },
                     onRetryClick = { viewModel.resetState(); stage = SetupStage.SIGNING_IN }
                 )
             }
@@ -135,10 +136,9 @@ fun ModelSetupScreen(
                 Text("Why does this need a sign-in?", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall, color = AgrixWhite)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Google requires anyone using Gemma to accept its license once. Signing in to " +
-                        "Hugging Face and (the very first time) tapping \"Agree and access repository\" " +
-                        "on the model page satisfies that — after this one-time step, everything else " +
-                        "here happens automatically and offline.",
+                    "Google requires anyone downloading the 550MB Gemma model to accept its license on Hugging Face once. " +
+                        "Note: If registering a new account and Hugging Face says \"Username is not available\", " +
+                        "it means that username is already taken worldwide on huggingface.co — try adding numbers or tap \"Offline Demo Mode\" above.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -152,13 +152,14 @@ private fun SetupBody(
     loadState: ModelLoadState,
     onSignInClick: () -> Unit,
     onImportClick: () -> Unit,
+    onDemoClick: () -> Unit,
     onRetryClick: () -> Unit
 ) {
     when {
         loadState is ModelLoadState.Failed -> {
             Text("Setup failed: ${loadState.message}", color = AgrixWarnRed, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
-            SetupButtons(onSignInClick = onRetryClick, onImportClick = onImportClick)
+            SetupButtons(onSignInClick = onRetryClick, onImportClick = onImportClick, onDemoClick = onDemoClick)
         }
         loadState is ModelLoadState.Loading -> {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -190,16 +191,20 @@ private fun SetupBody(
         downloadState is DownloadState.Error -> {
             Text("Setup failed: ${downloadState.message}", color = AgrixWarnRed, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
-            SetupButtons(onSignInClick = onRetryClick, onImportClick = onImportClick)
+            SetupButtons(onSignInClick = onRetryClick, onImportClick = onImportClick, onDemoClick = onDemoClick)
         }
         else -> {
-            SetupButtons(onSignInClick = onSignInClick, onImportClick = onImportClick)
+            SetupButtons(onSignInClick = onSignInClick, onImportClick = onImportClick, onDemoClick = onDemoClick)
         }
     }
 }
 
 @Composable
-private fun SetupButtons(onSignInClick: () -> Unit, onImportClick: () -> Unit) {
+private fun SetupButtons(
+    onSignInClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onDemoClick: () -> Unit
+) {
     NeonPrimaryButton(
         text = "Sign in & install AI model",
         onClick = onSignInClick,
@@ -215,5 +220,16 @@ private fun SetupButtons(onSignInClick: () -> Unit, onImportClick: () -> Unit) {
         Icon(Icons.Filled.FolderOpen, contentDescription = null)
         Spacer(Modifier.width(8.dp))
         Text("I already have the model file")
+    }
+    Spacer(Modifier.height(12.dp))
+    OutlinedButton(
+        onClick = onDemoClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AgrixNeonGreen),
+        border = androidx.compose.foundation.BorderStroke(1.dp, AgrixNeonGreen.copy(alpha = 0.6f))
+    ) {
+        Icon(Icons.Filled.Eco, contentDescription = null, tint = AgrixNeonGreen)
+        Spacer(Modifier.width(8.dp))
+        Text("Continue in Offline Demo Mode (No Login)", color = AgrixNeonGreen, fontWeight = FontWeight.SemiBold)
     }
 }

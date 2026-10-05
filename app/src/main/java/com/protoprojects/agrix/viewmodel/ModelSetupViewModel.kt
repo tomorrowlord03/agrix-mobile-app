@@ -63,6 +63,21 @@ class ModelSetupViewModel(app: Application) : AndroidViewModel(app) {
         _loadState.value = ModelLoadState.NotStarted
     }
 
+    /** Instant offline demo mode: allows immediate exploration without downloading 550MB model or Hugging Face sign-in. */
+    fun launchDemoMode() {
+        _downloadState.value = null
+        _loadState.value = ModelLoadState.Loading
+        viewModelScope.launch {
+            try {
+                agriXApp.gemma.load("demo_mode")
+                agriXApp.prefs.setModelInstalled("demo_mode")
+                _loadState.value = ModelLoadState.Ready
+            } catch (t: Throwable) {
+                _loadState.value = ModelLoadState.Failed(t.message ?: "Failed to start demo mode")
+            }
+        }
+    }
+
     /**
      * Loads the freshly installed model into the inference engine and persists
      * its path. This is a real, awaitable step: the setup screen should only
