@@ -74,32 +74,14 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // ---- On-device Gemma inference (Google MediaPipe & LiteRT-LM API) ----
-    // Google MediaPipe LLM Inference API (maintenance line)
-    implementation("com.google.mediapipe:tasks-genai:0.10.24")
-    // Google LiteRT-LM (next-gen on-device engine with NPU acceleration & MTP)
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.2")
+        // Google LiteRT-LM (production-ready on-device engine with NPU acceleration & MTP)
+        // Replaces MediaPipe LLM Inference (maintenance-only as of mid-2026)
+        implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
 
-    // tasks-vision brings in the com.google.mediapipe.framework.image classes
-    // (MPImage / BitmapImageBuilder) used to attach a photo to a prompt for
-    // vision-capable Gemma models (e.g. Gemma 3 Nano / multimodal .task
-    // builds). Kept as a separate artifact from tasks-genai on purpose —
-    // that's why these classes wouldn't resolve with tasks-genai alone.
-    //
-    // Pinned to 0.10.26, NOT 0.10.24 — confirmed against Maven Central that
-    // tasks-vision was never published at 0.10.24 (that's what the
-    // "Could not resolve tasks-vision:0.10.24" build failure was). Google
-    // publishes tasks-genai and tasks-vision on separate, not-always-in-sync
-    // schedules (see github.com/google-ai-edge/mediapipe issues #6047 and
-    // #6098) — tasks-vision jumped straight from 0.10.15 to 0.10.26 while
-    // tasks-genai has stayed at 0.10.24. 0.10.26 is the closest published
-    // tasks-vision version above the gap, and is Google's current stable
-    // MediaPipe line. If a real build ever hits a runtime crash that looks
-    // like a native-library mismatch (SIGSEGV on model load, not a Gradle
-    // resolution error), that's this cross-artifact version skew — try
-    // pinning both to the same exact version if one becomes available, or
-    // drop tasks-vision to 0.10.15 to match tasks-genai's release era more
-    // closely (at the cost of missing anything vision-side added after it).
-    implementation("com.google.mediapipe:tasks-vision:0.10.26")
+        // tasks-vision brings in the com.google.mediapipe.framework.image classes
+        // (MPImage / BitmapImageBuilder) used to attach a photo to a prompt for
+        // vision-capable Gemma models (e.g. Gemma 3n E2B/E4B, not 1B IT).
+        implementation("com.google.mediapipe:tasks-vision:0.10.27")
 
     implementation("org.json:json:20240303")
 
