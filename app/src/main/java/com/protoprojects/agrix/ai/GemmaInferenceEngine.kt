@@ -12,6 +12,11 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOp
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession.LlmInferenceSessionOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -289,14 +294,14 @@ class GemmaInferenceEngine(private val context: Context) {
      * Streams tokens as they are decoded by LiteRT-LM, providing real-time feedback
      * for typing animations and low-latency farmer UX.
      */
-    fun generateStreaming(prompt: String): kotlinx.coroutines.flow.Flow<String> = kotlinx.coroutines.flow.flow {
+    fun generateStreaming(prompt: String): Flow<String> = flow {
         val full = generate(prompt)
         val tokens = full.split(Regex("(?<=\\s)|(?<=\\n)"))
         for (tok in tokens) {
             emit(tok)
-            kotlinx.coroutines.delay(15) // Natural typing cadence
+            delay(15) // Natural typing cadence
         }
-    }.kotlinx.coroutines.flow.flowOn(Dispatchers.Default)
+    }.flowOn(Dispatchers.Default)
 
     /**
      * Channel-based streaming generation used by GemmaQueryViewModel.
@@ -304,14 +309,14 @@ class GemmaInferenceEngine(private val context: Context) {
     suspend fun generateStreaming(
         prompt: String,
         image: Bitmap? = null,
-        channel: kotlinx.coroutines.channels.Channel<String>
+        channel: Channel<String>
     ) {
         try {
             val response = generate(prompt, image)
             val tokens = response.split(Regex("(?<=\\s)|(?<=\\n)"))
             for (tok in tokens) {
                 channel.send(tok)
-                kotlinx.coroutines.delay(12)
+                delay(12)
             }
         } finally {
             channel.close()
